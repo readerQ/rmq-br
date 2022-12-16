@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
 
 	localio "github.com/readerQ/rmq-br/local-io"
 	"github.com/readerQ/rmq-br/rabbit"
@@ -47,6 +48,7 @@ func execDump(cmd *cobra.Command, args []string) {
 	err := cons.Consume(1, 2)
 	if err != nil {
 		log.Println(err)
+		os.Exit(1)
 	}
 
 	//	cons = cons.WithConnection(&conn)

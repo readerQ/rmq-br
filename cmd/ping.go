@@ -4,8 +4,10 @@ Copyright © 2022 https://github.com/readerQ/rmq-br
 package cmd
 
 import (
-	"fmt"
+	"log"
+	"os"
 
+	"github.com/readerQ/rmq-br/rabbit"
 	"github.com/spf13/cobra"
 )
 
@@ -13,9 +15,25 @@ import (
 var pingCmd = &cobra.Command{
 	Use:   "ping",
 	Short: "check connection",
-	Long:  ``,
+	Long: `create connection & channel (without queue). 
+claims that user, password, host, post and vhost are correct
+retrun 1 on error`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ping called")
+
+		conn := rabbit.RmqConnecton{
+			Url: serverUrl,
+		}
+
+		cons := rabbit.NewConsumer(queue, max, wait).WithConnection(&conn)
+
+		err := cons.Ping()
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		} else {
+			log.Println("seems to be ok")
+		}
+
 	},
 }
 

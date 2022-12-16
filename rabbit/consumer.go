@@ -36,6 +36,24 @@ func (rc *RmqConsumer) WithWriter(wrt MessageWriter) *RmqConsumer {
 	return rc
 }
 
+func (rc *RmqConsumer) Ping() (err error) {
+	err = rc.conn.Connect()
+	defer rc.conn.conn.Close()
+	if err != nil {
+		return fmt.Errorf("connection error: %s", err.Error())
+	}
+
+	ch, err := rc.conn.conn.Channel()
+	defer func() {
+		_ = ch.Close()
+	}()
+
+	if err != nil {
+		return fmt.Errorf("channel creation error: %s", err.Error())
+	}
+	return nil
+}
+
 func (rc *RmqConsumer) Consume(min, max int) (err error) {
 
 	err = rc.conn.Connect()
