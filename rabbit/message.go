@@ -1,7 +1,8 @@
 package rabbit
 
 type Message struct {
-	Queue string
-	Index int
-	Body  []byte
+	Queue       string
+	ContentType string
+	Index       int
+	Body        []byte
 }

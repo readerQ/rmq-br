@@ -62,6 +62,9 @@ func init() {
 	viper.BindPFlag("queue", dumpCmd.PersistentFlags().Lookup("queue"))
 	dumpCmd.MarkFlagRequired("queue")
 
+	dumpCmd.PersistentFlags().StringVarP(&dataFolder, "dir", "d", "data", "folder for messages")
+	viper.BindPFlag("dir", dumpCmd.PersistentFlags().Lookup("dir"))
+
 	dumpCmd.Flags().IntVarP(&max, "max", "", 0, "maximum number of messages. 0 = infinity")
 
 	dumpCmd.Flags().BoolVarP(&wait, "wait", "", false, "wait messages till --max 'll be reached")
