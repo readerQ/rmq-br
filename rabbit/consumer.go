@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/readerQ/rmq-br/tools"
 )
 
 type RmqConsumer struct {
@@ -78,7 +80,7 @@ func (rc *RmqConsumer) Consume(min, max int) (err error) {
 
 	defer func() {
 		speed := float64(total) / float64(time.Since(start).Seconds())
-		log.Printf("consumed %d messages, %d bytes, avg %.2f b/s ", count, total, speed)
+		log.Printf("consumed %d messages, %d bytes, avg %v", count, total, tools.FormatNetSpeed(speed))
 	}()
 
 	if rc.wait {

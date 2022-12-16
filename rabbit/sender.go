@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
+	"github.com/readerQ/rmq-br/tools"
 )
 
 type RmqSender struct {
@@ -63,7 +64,7 @@ func (sndr *RmqSender) Send() (err error) {
 
 	defer func() {
 		speed := float64(total) / float64(time.Since(start).Seconds())
-		log.Printf("published %d messages, %d bytes, avg %.2f b/s ", count, total, speed)
+		log.Printf("published %d messages, %d bytes, avg %v ", count, total, tools.FormatNetSpeed(speed))
 	}()
 
 	for {
