@@ -11,16 +11,18 @@ type RmqConsumer struct {
 
 	max    int
 	wait   bool
+	quiet  bool
 	conn   *RmqConnecton
 	writer MessageWriter
 }
 
-func NewConsumer(queue string, max int, wait bool) *RmqConsumer {
+func NewConsumer(queue string, max int, wait bool, q bool) *RmqConsumer {
 
 	return &RmqConsumer{
 		queue: queue,
 		max:   max,
 		wait:  wait,
+		quiet: q,
 	}
 }
 
@@ -71,6 +73,14 @@ func (rc *RmqConsumer) Consume(min, max int) (err error) {
 		return fmt.Errorf("channel creation error: %s", err.Error())
 	}
 	count := 0
+	start := time.Now()
+	var total uint64
+
+	defer func() {
+		speed := float64(total) / float64(time.Since(start).Seconds())
+		log.Printf("consumed %d messages, %d bytes, avg %.2f b/s ", count, total, speed)
+	}()
+
 	if rc.wait {
 		log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	}
@@ -88,19 +98,25 @@ func (rc *RmqConsumer) Consume(min, max int) (err error) {
 				time.Sleep(250 * time.Millisecond)
 				continue
 			} else {
-				log.Println("no more messages in queue")
+				if !rc.quiet {
+					log.Println("no more messages in queue")
+				}
 				return nil
 			}
 		}
 
-		var mot string
-		if len(d.Body) > 128 {
-			mot = fmt.Sprintf("%s ... (%d bytes)", d.Body[:128], len(d.Body))
-		} else {
-			mot = string(d.Body)
+		if !rc.quiet {
+			var mot string
+			if len(d.Body) > 128 {
+				mot = fmt.Sprintf("%s ... (%d bytes)", d.Body[:128], len(d.Body))
+			} else {
+				mot = string(d.Body)
+			}
+
+			log.Printf("Received a message: %s", mot)
 		}
 
-		log.Printf("Received a message: %s", mot)
+		total += uint64(len(d.Body))
 
 		msg := Message{
 			Queue: rc.queue,

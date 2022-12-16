@@ -42,7 +42,7 @@ func execDump(cmd *cobra.Command, args []string) {
 	wr := localio.NewFileWrited(dataFolder)
 	wr.Extension = ext
 
-	cons := rabbit.NewConsumer(queue, max, wait).WithConnection(&conn)
+	cons := rabbit.NewConsumer(queue, max, quite, wait).WithConnection(&conn)
 	cons = cons.WithWriter(wr)
 
 	err := cons.Consume(1, 2)
@@ -70,5 +70,7 @@ func init() {
 	dumpCmd.Flags().BoolVarP(&wait, "wait", "", false, "wait messages till --max 'll be reached")
 
 	dumpCmd.Flags().StringVarP(&ext, "ext", "", "json", "file extentions")
+
+	dumpCmd.Flags().BoolVarP(&quite, "quite", "", false, "less mesages")
 
 }

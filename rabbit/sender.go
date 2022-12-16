@@ -10,19 +10,22 @@ import (
 )
 
 type RmqSender struct {
-	exchange             string
-	routingKey           string
-	mandatory, immediate bool
+	exchange                    string
+	routingKey                  string
+	mandatory, immediate, quiet bool
 
 	conn   *RmqConnecton
 	reader MessageReader
 }
 
-func NewSender(exchange string, routingKey string, mandatory, immediate bool) *RmqSender {
+func NewSender(exchange string, routingKey string, mandatory, immediate bool, quiet bool) *RmqSender {
 
 	return &RmqSender{
 		exchange:   exchange,
 		routingKey: routingKey,
+		mandatory:  mandatory,
+		immediate:  immediate,
+		quiet:      quiet,
 	}
 }
 
@@ -55,7 +58,13 @@ func (sndr *RmqSender) Send() (err error) {
 		return fmt.Errorf("channel creation error: %s", err.Error())
 	}
 	count := 0
-	defer func() { log.Printf("published %d messages", count) }()
+	start := time.Now()
+	var total uint64
+
+	defer func() {
+		speed := float64(total) / float64(time.Since(start).Seconds())
+		log.Printf("published %d messages, %d bytes, avg %.2f b/s ", count, total, speed)
+	}()
 
 	for {
 
@@ -75,6 +84,17 @@ func (sndr *RmqSender) Send() (err error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		if !sndr.quiet {
+			var mot string
+			if len(msg.Body) > 128 {
+				mot = fmt.Sprintf("%s ... (%d bytes)", msg.Body[:128], len(msg.Body))
+			} else {
+				mot = string(msg.Body)
+			}
+
+			log.Printf("Send a message: %s", mot)
+		}
+
 		err = ch.PublishWithContext(ctx, sndr.exchange,
 			sndr.routingKey,
 			sndr.mandatory,
@@ -84,6 +104,8 @@ func (sndr *RmqSender) Send() (err error) {
 				Body:        []byte(msg.Body),
 			},
 		)
+
+		total += uint64(len(msg.Body))
 
 		if err != nil {
 

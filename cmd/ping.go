@@ -24,7 +24,7 @@ retrun 1 on error`,
 			Url: serverUrl,
 		}
 
-		cons := rabbit.NewConsumer(queue, max, wait).WithConnection(&conn)
+		cons := rabbit.NewConsumer(queue, max, wait, false).WithConnection(&conn)
 
 		err := cons.Ping()
 		if err != nil {

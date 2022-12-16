@@ -39,7 +39,7 @@ func execSend(cmd *cobra.Command, args []string) {
 
 	rdr := localio.NewMessageReader(dataFolder, mask, contentType)
 
-	cons := rabbit.NewSender(exchange, routingKey, mandatory, immediate).WithConnection(&conn)
+	cons := rabbit.NewSender(exchange, routingKey, mandatory, immediate, quite).WithConnection(&conn)
 	cons = cons.WithReader(rdr)
 
 	err := cons.Send()
@@ -70,4 +70,5 @@ func init() {
 	sendCmd.PersistentFlags().StringVarP(&contentType, "contentType", "", "application/json", "ContentType header")
 	viper.BindPFlag("contentType", sendCmd.PersistentFlags().Lookup("contentType"))
 
+	sendCmd.Flags().BoolVarP(&quite, "quite", "", false, "less mesages")
 }

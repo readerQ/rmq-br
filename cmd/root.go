@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,6 +27,10 @@ var rootCmd = &cobra.Command{
 var (
 	serverUrl  string
 	dataFolder string
+	quite      bool
+
+	totalBytes uint64
+	startTime  time.Time
 )
 
 // Execute adds all child commands to the root command and sets flags appropriately.
