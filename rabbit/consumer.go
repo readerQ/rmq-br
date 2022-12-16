@@ -3,23 +3,23 @@ package rabbit
 import (
 	"fmt"
 	"log"
+	"time"
 )
 
 type RmqConsumer struct {
-	queue  string
-	min    int
+	queue string
+
 	max    int
 	wait   bool
 	conn   *RmqConnecton
 	writer MessageWriter
 }
 
-func NewConsumer(queue string, min, max int, wait bool) *RmqConsumer {
+func NewConsumer(queue string, max int, wait bool) *RmqConsumer {
 
 	return &RmqConsumer{
 		queue: queue,
 		max:   max,
-		min:   min,
 		wait:  wait,
 	}
 }
@@ -36,101 +36,74 @@ func (rc *RmqConsumer) WithWriter(wrt MessageWriter) *RmqConsumer {
 	return rc
 }
 
-// func (rc *RmqConsumer) chanCreate() error {
+func (rc *RmqConsumer) Consume(min, max int) (err error) {
 
-// 	// defer conn.Close() // todo
-// 	err := rc.conn.Connect()
-// 	if err!=nil{
-// 		return err
-// 	}
-
-// 	ch, err := rc.conn.conn.Channel()
-// 	if err!=nil{
-// 		return err
-// 	}
-// 	defer ch.Close()
-
-// 	q, err := ch. QueueDeclare(
-// 	  "hello", // name
-// 	  false,   // durable
-// 	  false,   // delete when unused
-// 	  false,   // exclusive
-// 	  false,   // no-wait
-// 	  nil,     // arguments
-// 	)
-
-// 	return err
-// }
-
-func (rc *RmqConsumer) Consume(min, max int) error {
-
-	// defer conn.Close() // todo
-	err := rc.conn.Connect()
+	err = rc.conn.Connect()
+	defer rc.conn.conn.Close()
 	if err != nil {
 		return fmt.Errorf("connection error: %s", err.Error())
 	}
 
 	ch, err := rc.conn.conn.Channel()
+	defer func() {
+		_ = ch.Close()
+	}()
+
 	if err != nil {
 		return fmt.Errorf("channel creation error: %s", err.Error())
 	}
-
-	msgs, err := ch.Consume(
-		rc.queue, // queue
-		"rmq-br", // consumer
-		false,    // auto-ack
-		false,    // exclusive
-		false,    // no-local
-		false,    // no-wait
-		nil,      // args
-	)
-
-	if err != nil {
-		return fmt.Errorf("consume error: %s", err.Error())
-	}
-
-	forever := make(chan struct{})
-	stop := make(chan struct{})
-
 	count := 0
-	go func() {
-
-		for d := range msgs {
-			log.Printf("Received a message: %s", d.Body)
-			msg := Message{
-				Queue: rc.queue,
-				Index: count,
-				Body:  d.Body,
-			}
-			err := rc.writer.WriteMessage(msg)
-
-			if err != nil {
-				stop <- struct{}{}
-			}
-
-			ch.Ack(d.DeliveryTag, false)
-			count++
-
-			if rc.max > 0 && count >= rc.max {
-				log.Printf("limit %d reached\n", rc.max)
-				stop <- struct{}{}
-				return
-			}
-
-		}
-	}()
-
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-	select {
-	case <-stop:
-		{
-			log.Println("stop consume by signal")
-		}
-	case <-forever:
-		{
-
-		}
+	if rc.wait {
+		log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	}
 
-	return nil
+	for {
+
+		d, ok, err := ch.Get(rc.queue, false)
+
+		if err != nil {
+			log.Println(fmt.Errorf("error on get message: %s", err.Error()))
+		}
+
+		if !ok {
+			if rc.wait {
+				time.Sleep(250 * time.Millisecond)
+				continue
+			} else {
+				log.Println("no more messages in queue")
+				return nil
+			}
+		}
+
+		var mot string
+		if len(d.Body) > 128 {
+			mot = fmt.Sprintf("%s ... (%d bytes)", d.Body[:128], len(d.Body))
+		} else {
+			mot = string(d.Body)
+		}
+
+		log.Printf("Received a message: %s", mot)
+
+		msg := Message{
+			Queue: rc.queue,
+			Index: count,
+			Body:  d.Body,
+		}
+
+		err = rc.writer.WriteMessage(msg)
+
+		if err != nil {
+			return err
+		}
+
+		ch.Ack(d.DeliveryTag, false)
+		count++
+
+		if rc.max > 0 && count >= rc.max {
+			log.Printf("max limit %d reached\n", rc.max)
+			return nil
+		}
+
+	}
+
 }

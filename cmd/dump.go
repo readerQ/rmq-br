@@ -16,8 +16,8 @@ import (
 var (
 	queue string
 	max   int
-	min   int
 	wait  bool
+	ext   string
 )
 
 // dumpCmd represents the dump command
@@ -39,8 +39,9 @@ func execDump(cmd *cobra.Command, args []string) {
 	}
 
 	wr := localio.NewFileWrited(dataFolder)
+	wr.Extension = ext
 
-	cons := rabbit.NewConsumer(queue, min, min, wait).WithConnection(&conn)
+	cons := rabbit.NewConsumer(queue, max, wait).WithConnection(&conn)
 	cons = cons.WithWriter(wr)
 
 	err := cons.Consume(1, 2)
@@ -59,8 +60,10 @@ func init() {
 	viper.BindPFlag("queue", dumpCmd.PersistentFlags().Lookup("queue"))
 	dumpCmd.MarkFlagRequired("queue")
 
-	dumpCmd.Flags().IntVarP(&max, "max", "", 10, "maximum number of messages. 0 = infinity")
-	dumpCmd.Flags().IntVarP(&min, "min", "", 1, "minimum number of messages")
+	dumpCmd.Flags().IntVarP(&max, "max", "", 0, "maximum number of messages. 0 = infinity")
+
 	dumpCmd.Flags().BoolVarP(&wait, "wait", "", false, "wait messages till --max 'll be reached")
+
+	dumpCmd.Flags().StringVarP(&ext, "ext", "", "json", "file extentions")
 
 }
